@@ -1,0 +1,69 @@
+---
+- name: Ansible setup for servers
+  hosts: all
+  become: yes
+  tasks:
+
+    - name: Ensure required packages are installed (Debian)
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - git
+        - rsync
+        - tmux
+        - curl
+        - unrar
+        - gzip
+        - unzip
+        - vim
+        - nvim
+        - net-tools
+        - gawk
+        - coreutils
+        - sysstat
+        - zsh
+      when: ansible_os_family == "Debian"
+
+    - name: Clone dotfiles repository to a temporary directory
+      git:
+        repo: 'https://github.com/ysxninja/dotfiles.git'
+        dest: /tmp/dotfiles-tmp
+        version: server
+        separate_git_dir: "{{ ansible_env.HOME }}/dotfiles"
+
+    - name: Sync dotfiles to home directory
+      command: rsync --recursive --verbose --exclude '.git' /tmp/dotfiles-tmp/ "{{ ansible_env.HOME }}/"
+
+    - name: Remove temporary dotfiles directory
+      file:
+        path: /tmp/dotfiles-tmp
+        state: absent
+        force: yes
+
+    - name: Install vim-plug for Vim
+      shell: |
+        curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+        vim +'PlugInstall --sync' +qa
+
+    - name: Run ultimate-pull script
+      command: /bin/bash "{{ ansible_env.HOME }}/.local/bin/ultimate-pull"
+      args:
+        executable: /bin/bash
+
+    - name: Ensure tmux is installed
+      package:
+        name: tmux
+        state: present
+
+    - name: Install tmux plugins using TPM
+      shell: |
+        ~/.tmux/plugins/tpm/bin/install_plugins
+      environment:
+        - HOME: "{{ ansible_env.HOME }}"
+      args:
+        executable: /bin/bash
+
+    - name: Change default shell to zsh
+      command: chsh -s /bin/zsh "{{ ansible_env.USER }}"
+      become: yes
