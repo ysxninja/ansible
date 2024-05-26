@@ -1,0 +1,3 @@
+- Evolve the playbook to a modular form
+- Use tags for a customized approach
+- Add playbook for pokemon hunter
